@@ -20,6 +20,14 @@
         .table-reserva td { vertical-align: middle; border-color: #222; color: #ccc; }
         .btn-reservacion { background-color: #d4af37; color: black; font-weight: 600; border: none; }
         .btn-reservacion:hover { background-color: #b38f2d; }
+        
+        /* Estilos para el Ticket Impreso */
+        @media print {
+            body * { visibility: hidden; }
+            #ticket-imprimir, #ticket-imprimir * { visibility: visible; }
+            #ticket-imprimir { position: absolute; left: 0; top: 0; width: 80mm; color: black !important; background: white !important; padding: 10px; }
+            .btn-close, .btn-primary { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -41,7 +49,7 @@
         <div class="row mb-4">
             <div class="col-md-12">
                 <h2 style="color: #d4af37;">Próximas Reservaciones</h2>
-                <p class="text-secondary">Lista en tiempo real de los clientes registrados.</p>
+                <p class="text-secondary">Toma órdenes y genera tickets para tus clientes.</p>
             </div>
         </div>
 
@@ -64,6 +72,39 @@
         </div>
     </div>
 
+    <div class="modal fade" id="modalOrden" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-white border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title" style="color: #d4af37;">Generar Ticket de Consumo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="ticket-imprimir">
+                    <div class="text-center mb-3">
+                        <h4 class="mb-0">MaferMex</h4>
+                        <small class="text-secondary">Sabor Tradicional Mexicano</small>
+                        <hr class="border-secondary">
+                    </div>
+                    <p><strong>Cliente:</strong> <span id="t-cliente"></span></p>
+                    <div class="mb-3">
+                        <label class="form-label small text-warning">Platillos / Bebidas:</label>
+                        <textarea id="t-pedido" class="form-control bg-black text-white border-secondary" rows="4" placeholder="Ej: 3 Tacos al pastor, 1 Coca-Cola..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-warning">Total a Pagar ($):</label>
+                        <input type="number" id="t-total" class="form-control bg-black text-white border-secondary" placeholder="0.00">
+                    </div>
+                    <div class="text-center mt-4 d-print-none">
+                        <button type="button" class="btn btn-reservacion w-100" onclick="window.print()">
+                            <i class="fas fa-print"></i> Imprimir Ticket
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="js/bootstrap.bundle.min.js"></script>
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -83,7 +124,6 @@
     const db = getFirestore(app);
     const listaContenedor = document.getElementById('lista-reservaciones');
 
-    // Protección de Ruta
     onAuthStateChanged(auth, (user) => {
         if (user && user.email === "maferx01x@gmail.com") {
             document.getElementById('user-badge').innerText = user.email;
@@ -98,7 +138,7 @@
         onSnapshot(q, (snapshot) => {
             listaContenedor.innerHTML = "";
             if (snapshot.empty) {
-                listaContenedor.innerHTML = `<tr><td colspan="6" class="text-center text-secondary">No hay reservaciones pendientes.</td></tr>`;
+                listaContenedor.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-4">No hay reservaciones hoy.</td></tr>`;
                 return;
             }
             snapshot.forEach((docSnap) => {
@@ -112,6 +152,9 @@
                     <td class="text-center">${data.personas}</td>
                     <td class="small text-muted">${data.notas || "-"}</td>
                     <td>
+                        <button class="btn btn-sm btn-outline-warning me-2" onclick="abrirOrden('${data.email}')">
+                            <i class="fas fa-utensils"></i> Orden
+                        </button>
                         <button class="btn btn-sm btn-outline-danger" onclick="borrarReserva('${id}')">
                             <i class="fas fa-trash-alt"></i>
                         </button>
@@ -122,7 +165,14 @@
         });
     }
 
-    // Funciones globales
+    window.abrirOrden = (clienteEmail) => {
+        document.getElementById('t-cliente').innerText = clienteEmail;
+        document.getElementById('t-pedido').value = "";
+        document.getElementById('t-total').value = "";
+        const myModal = new bootstrap.Modal(document.getElementById('modalOrden'));
+        myModal.show();
+    };
+
     window.borrarReserva = async (id) => {
         if (confirm("¿Eliminar esta reservación?")) {
             await deleteDoc(doc(db, "reservaciones", id));
