@@ -10,28 +10,30 @@
     <style>
         body { background-color: #000; color: white; font-family: 'Poppins', sans-serif; }
         .admin-container { padding: 40px 20px; }
-        .table-reserva { background-color: #111; border-radius: 10px; border: 1px solid #333; overflow: hidden;}
+        .table-reserva { 
+            background-color: #111; 
+            border-radius: 10px; 
+            overflow: hidden;
+            border: 1px solid #333;
+        }
         .table-reserva thead { background-color: #d4af37; color: black; }
+        .table-reserva td { vertical-align: middle; border-color: #222; color: #ccc; }
         .btn-reservacion { background-color: #d4af37; color: black; font-weight: 600; border: none; }
         .btn-reservacion:hover { background-color: #b38f2d; color: white; }
         
-        /* Estilos Ticket */
-        #lista-orden-ticket { border-top: 1px dashed #444; padding-top: 10px; }
-        .item-orden { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px; }
-
-        @media print {
-            body * { visibility: hidden; }
-            #ticket-imprimir, #ticket-imprimir * { visibility: visible; }
-            #ticket-imprimir { position: absolute; left: 0; top: 0; width: 100%; color: black !important; background: white !important; padding: 20px; }
-            .no-print { display: none !important; }
-        }
+        /* Estilos Lista de Orden */
+        #lista-orden-items { border-top: 1px dashed #444; padding-top: 10px; margin-top: 10px; }
+        .item-orden { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px; background: #000; padding: 5px 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
 
     <nav class="navbar navbar-dark bg-black border-bottom border-secondary">
         <div class="container">
-            <a class="navbar-brand" href="#"><img src="items/logo.png" style="max-height: 40px;" class="me-2"> PANEL MESEROS</a>
+            <a class="navbar-brand" href="#">
+                <img src="items/logo.png" style="max-height: 40px;" class="me-2"> 
+                PANEL MESEROS MAFERMEX
+            </a>
             <div>
                 <span id="user-badge" class="small me-3 text-secondary"></span>
                 <button id="btn-logout" class="btn btn-outline-danger btn-sm">Cerrar Sesión</button>
@@ -40,12 +42,17 @@
     </nav>
 
     <div class="container admin-container">
-        <h2 style="color: #d4af37;">Próximas Reservaciones</h2>
-        <div class="table-responsive table-reserva mt-4">
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <h2 style="color: #d4af37;">Reservaciones de Hoy</h2>
+                <p class="text-secondary">Selecciona una mesa para tomar la orden.</p>
+            </div>
+        </div>
+
+        <div class="table-responsive table-reserva">
             <table class="table table-dark table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Fecha</th>
                         <th>Hora</th>
                         <th>Cliente</th>
                         <th>Pax</th>
@@ -54,7 +61,7 @@
                     </tr>
                 </thead>
                 <tbody id="lista-reservaciones">
-                    <tr><td colspan="6" class="text-center py-4">Cargando reservaciones...</td></tr>
+                    <tr><td colspan="5" class="text-center py-4">Cargando...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -67,18 +74,13 @@
                     <h5 class="modal-title" style="color: #d4af37;">Comanda Digital</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" id="ticket-imprimir">
-                    <div class="text-center mb-3">
-                        <h4 class="mb-0">MaferMex</h4>
-                        <small>Ticket de Consumo</small>
-                        <hr class="border-secondary">
-                    </div>
-                    <p><strong>Cliente:</strong> <span id="t-cliente"></span></p>
+                <div class="modal-body">
+                    <p><strong>Atendiendo a:</strong> <span id="t-cliente" class="text-info"></span></p>
                     
-                    <div class="mb-3 no-print">
-                        <label class="form-label small text-warning">Agregar Platillo:</label>
+                    <div class="mb-3">
+                        <label class="form-label small text-warning">Selecciona Platillo:</label>
                         <select id="select-menu" class="form-select bg-black text-white border-secondary">
-                            <option value="">Selecciona un platillo...</option>
+                            <option value="">-- Menú MaferMex --</option>
                             <option value="85">Tacos al Pastor - $85</option>
                             <option value="85">Tacos Dorados - $85</option>
                             <option value="120">Tamales - $120</option>
@@ -95,24 +97,21 @@
                             <option value="95">Agua de Horchata - $95</option>
                             <option value="95">Aguas de Sabores - $95</option>
                         </select>
-                        <button class="btn btn-sm btn-reservacion mt-2 w-100" onclick="agregarAlTicket()">Agregar a la cuenta</button>
+                        <button class="btn btn-reservacion w-100 mt-2" onclick="agregarPlatillo()">Agregar a la cuenta</button>
                     </div>
 
-                    <div id="lista-orden-ticket">
+                    <div id="lista-orden-items">
                         </div>
 
-                    <hr class="border-secondary">
-                    <div class="d-flex justify-content-between">
-                        <h5>TOTAL:</h5>
-                        <h5 id="total-cuenta">$0.00</h5>
+                    <div class="d-flex justify-content-between mt-3 border-top border-secondary pt-2">
+                        <h4 class="text-warning">TOTAL:</h4>
+                        <h4 id="total-cuenta">$0.00</h4>
                     </div>
 
-                    <div class="text-center mt-4 no-print">
-                        <button type="button" class="btn btn-reservacion w-100" onclick="window.print()">
-                            <i class="fas fa-print"></i> Imprimir Ticket
-                        </button>
-                        <button class="btn btn-link text-danger btn-sm mt-2" onclick="limpiarTicket()">Limpiar Cuenta</button>
-                    </div>
+                    <button class="btn btn-success w-100 mt-4 py-2" onclick="enviarWhatsApp()">
+                        <i class="fab fa-whatsapp"></i> Enviar Ticket por WhatsApp
+                    </button>
+                    <button class="btn btn-link text-secondary btn-sm w-100 mt-2" onclick="limpiarOrden()">Borrar todo</button>
                 </div>
             </div>
         </div>
@@ -136,7 +135,9 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    let totalAcumulado = 0;
+    
+    let totalGlobal = 0;
+    let textoResumen = "";
 
     onAuthStateChanged(auth, (user) => {
         if (user && user.email === "maferx01x@gmail.com") {
@@ -150,57 +151,85 @@
     function escucharReservas() {
         const q = query(collection(db, "reservaciones"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
-            const lista = document.getElementById('lista-reservaciones');
-            lista.innerHTML = "";
+            const tbody = document.getElementById('lista-reservaciones');
+            tbody.innerHTML = "";
+            if (snapshot.empty) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-secondary py-4">No hay clientes en lista.</td></tr>`;
+                return;
+            }
             snapshot.forEach((docSnap) => {
                 const data = docSnap.data();
+                const id = docSnap.id;
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${data.fecha}</td>
                     <td><span class="badge border border-secondary">${data.hora}</span></td>
                     <td class="text-info">${data.email}</td>
                     <td class="text-center">${data.personas}</td>
                     <td class="small text-muted">${data.notas || "-"}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-warning me-2" onclick="abrirOrden('${data.email}')"><i class="fas fa-utensils"></i> Orden</button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="borrarReserva('${docSnap.id}')"><i class="fas fa-trash-alt"></i></button>
-                    </td>`;
-                lista.appendChild(tr);
+                        <button class="btn btn-sm btn-outline-warning me-2" onclick="abrirOrden('${data.email}')">
+                            <i class="fas fa-utensils"></i> Orden
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="borrarReserva('${id}')">
+                            <i class="fas fa-check"></i> Atendido
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
             });
         });
     }
 
     window.abrirOrden = (email) => {
         document.getElementById('t-cliente').innerText = email;
-        limpiarTicket();
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalOrden')).show();
+        limpiarOrden();
+        const modal = new bootstrap.Modal(document.getElementById('modalOrden'));
+        modal.show();
     };
 
-    window.agregarAlTicket = () => {
+    window.agregarPlatillo = () => {
         const select = document.getElementById('select-menu');
         const precio = parseFloat(select.value);
         const nombre = select.options[select.selectedIndex].text.split(' - ')[0];
 
         if (isNaN(precio)) return;
 
-        const contenedor = document.getElementById('lista-orden-ticket');
-        const div = document.createElement('div');
-        div.className = 'item-orden';
-        div.innerHTML = `<span>${nombre}</span> <span>$${precio.toFixed(2)}</span>`;
-        contenedor.appendChild(div);
+        const contenedor = document.getElementById('lista-orden-items');
+        const item = document.createElement('div');
+        item.className = 'item-orden';
+        item.innerHTML = `<span>${nombre}</span> <strong>$${precio}</strong>`;
+        contenedor.appendChild(item);
 
-        totalAcumulado += precio;
-        document.getElementById('total-cuenta').innerText = `$${totalAcumulado.toFixed(2)}`;
+        totalGlobal += precio;
+        textoResumen += `• ${nombre} ($${precio})\n`;
+        document.getElementById('total-cuenta').innerText = `$${totalGlobal.toFixed(2)}`;
     };
 
-    window.limpiarTicket = () => {
-        totalAcumulado = 0;
-        document.getElementById('lista-orden-ticket').innerHTML = "";
+    window.enviarWhatsApp = () => {
+        if (totalGlobal === 0) return alert("Agrega al menos un platillo.");
+
+        const cliente = document.getElementById('t-cliente').innerText;
+        let mensaje = `*🇲🇽 TICKET DIGITAL MAFERMEX*\n`;
+        mensaje += `_Atención personalizada_\n\n`;
+        mensaje += `*Cliente:* ${cliente}\n`;
+        mensaje += `*Detalle:*\n${textoResumen}\n`;
+        mensaje += `*TOTAL A PAGAR: $${totalGlobal.toFixed(2)}*\n\n`;
+        mensaje += `¡Gracias por visitarnos! 🌮✨`;
+
+        window.open(`https://wa.me/?text=${encodeURIComponent(mensaje)}`, '_blank');
+    };
+
+    window.limpiarOrden = () => {
+        totalGlobal = 0;
+        textoResumen = "";
+        document.getElementById('lista-orden-items').innerHTML = "";
         document.getElementById('total-cuenta').innerText = "$0.00";
     };
 
     window.borrarReserva = async (id) => {
-        if (confirm("¿Eliminar reservación?")) await deleteDoc(doc(db, "reservaciones", id));
+        if (confirm("¿Marcar cliente como atendido y quitar de la lista?")) {
+            await deleteDoc(doc(db, "reservaciones", id));
+        }
     };
 
     document.getElementById('btn-logout').addEventListener('click', () => {
