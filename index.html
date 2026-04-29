@@ -4,66 +4,78 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/reserva01.css">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <title>Panel de Meseros - MaferMex</title>
-    <style>
-        body { background-color: #000; color: white; font-family: 'Poppins', sans-serif; }
-        .admin-container { padding: 40px 20px; }
-        .table-reserva { 
-            background-color: #111; 
-            border-radius: 10px; 
-            overflow: hidden;
-            border: 1px solid #333;
-        }
-        .table-reserva thead { background-color: #d4af37; color: black; }
-        .table-reserva td { vertical-align: middle; border-color: #222; color: #ccc; }
-        .btn-check-res { color: #d4af37; cursor: pointer; transition: 0.3s; }
-        .btn-check-res:hover { color: #fff; transform: scale(1.2); }
-        .status-badge { font-size: 0.8rem; padding: 5px 10px; border-radius: 20px; }
-    </style>
+    <title>Acceso Admin - MaferMex</title>
 </head>
-<body>
+<body class="bg-black">
 
-    <nav class="navbar navbar-dark bg-black border-bottom border-secondary">
-        <div class="container">
-            <a class="navbar-brand font-family-playfair" href="#">
-                <img src="items/logo.png" style="max-height: 40px;" class="me-2"> 
-                PANEL DE CONTROL MESEROS
-            </a>
-            <button onclick="window.location.reload()" class="btn btn-outline-warning btn-sm">
-                <i class="fas fa-sync-alt"></i> Actualizar
-            </button>
-        </div>
-    </nav>
-
-    <div class="container admin-container">
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <h2 class="font-family-playfair" style="color: #d4af37;">Próximas Reservaciones</h2>
-                <p class="text-secondary">Lista en tiempo real de los clientes registrados.</p>
+<section class="vh-100 d-flex align-items-center justify-content-center">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4">
+                <div class="card bg-dark text-white border-secondary shadow-lg">
+                    <div class="card-body p-5 text-center">
+                        <img src="items/logo.png" alt="Logo" class="mb-4" style="max-height: 80px;">
+                        <h2 class="titulo-principal fs-2 mb-4" style="color: #d4af37;">Admin Login</h2>
+                        
+                        <form id="admin-login-form"> 
+                            <div class="mb-3 text-start">
+                                <label class="form-label font-family-poppins">Usuario Administrador</label>
+                                <input type="email" id="email" class="form-control bg-black text-white border-secondary" value="maferx01x@gmail.com" readonly>
+                            </div>
+                            <div class="mb-4 text-start">
+                                <label class="form-label font-family-poppins">Contraseña</label>
+                                <input type="password" id="password" class="form-control bg-black text-white border-secondary" placeholder="••••••••" required>
+                            </div>
+                            <button type="submit" id="btn-ingresar" class="btn btn-reservacion w-100 py-2">Ingresar al Panel</button>
+                        </form>
+                        <div id="error-msg" class="text-danger mt-3 small d-none">Credenciales incorrectas.</div>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <div class="table-responsive table-reserva">
-            <table class="table table-dark table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Hora</th>
-                        <th>Cliente</th>
-                        <th>Pax</th>
-                        <th>Notas</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="lista-reservaciones">
-                    </tbody>
-            </table>
-        </div>
     </div>
+</section>
 
-    <script type="module" src="js/admin-script.js"></script>
-    <scrip type="module" src="js/boostrap.bundle.js"></script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAo3jrNj8tE4f1rjtv1ac6baXwbadybpwA",
+        authDomain: "mafermex-4f125.firebaseapp.com",
+        projectId: "mafermex-4f125",
+        storageBucket: "mafermex-4f125.firebasestorage.app",
+        messagingSenderId: "140753612550",
+        appId: "1:140753612550:web:33bd69a83caf10b8d5b887"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const loginForm = document.getElementById('admin-login-form');
+    const btnIngresar = document.getElementById('btn-ingresar');
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = "maferx01x@gmail.com";
+        const password = document.getElementById('password').value;
+        const errorMsg = document.getElementById('error-msg');
+
+        btnIngresar.innerText = "Verificando...";
+        btnIngresar.disabled = true;
+
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            window.location.href = "panel-meseros.html"; 
+        } catch (error) {
+            errorMsg.classList.remove('d-none');
+            btnIngresar.innerText = "Ingresar al Panel";
+            btnIngresar.disabled = false;
+        }
+    });
+</script>
 </body>
 </html>
