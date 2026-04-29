@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <title>Panel de Meseros - MaferMex</title>
@@ -19,14 +19,22 @@
         .table-reserva thead { background-color: #d4af37; color: black; }
         .table-reserva td { vertical-align: middle; border-color: #222; color: #ccc; }
         .btn-reservacion { background-color: #d4af37; color: black; font-weight: 600; border: none; }
-        .btn-reservacion:hover { background-color: #b38f2d; }
+        .btn-reservacion:hover { background-color: #b38f2d; color: white; }
         
         /* Estilos para el Ticket Impreso */
         @media print {
             body * { visibility: hidden; }
             #ticket-imprimir, #ticket-imprimir * { visibility: visible; }
-            #ticket-imprimir { position: absolute; left: 0; top: 0; width: 80mm; color: black !important; background: white !important; padding: 10px; }
-            .btn-close, .btn-primary { display: none; }
+            #ticket-imprimir { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                color: black !important; 
+                background: white !important; 
+                padding: 20px;
+            }
+            .btn-close, .btn-imprimir-ticket, .no-print { display: none !important; }
         }
     </style>
 </head>
@@ -49,7 +57,7 @@
         <div class="row mb-4">
             <div class="col-md-12">
                 <h2 style="color: #d4af37;">Próximas Reservaciones</h2>
-                <p class="text-secondary">Toma órdenes y genera tickets para tus clientes.</p>
+                <p class="text-secondary">Gestiona clientes, toma órdenes y genera tickets.</p>
             </div>
         </div>
 
@@ -86,16 +94,19 @@
                         <hr class="border-secondary">
                     </div>
                     <p><strong>Cliente:</strong> <span id="t-cliente"></span></p>
-                    <div class="mb-3">
-                        <label class="form-label small text-warning">Platillos / Bebidas:</label>
-                        <textarea id="t-pedido" class="form-control bg-black text-white border-secondary" rows="4" placeholder="Ej: 3 Tacos al pastor, 1 Coca-Cola..."></textarea>
+                    
+                    <div class="mb-3 no-print">
+                        <label class="form-label small text-warning">Detalle del Pedido:</label>
+                        <textarea id="t-pedido" class="form-control bg-black text-white border-secondary" rows="4" placeholder="Escribe aquí los platos..."></textarea>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small text-warning">Total a Pagar ($):</label>
+                    
+                    <div class="mb-3 no-print">
+                        <label class="form-label small text-warning">Total a Cobrar ($):</label>
                         <input type="number" id="t-total" class="form-control bg-black text-white border-secondary" placeholder="0.00">
                     </div>
-                    <div class="text-center mt-4 d-print-none">
-                        <button type="button" class="btn btn-reservacion w-100" onclick="window.print()">
+
+                    <div class="text-center mt-4 no-print">
+                        <button type="button" class="btn btn-reservacion w-100 btn-imprimir-ticket" onclick="imprimirTicket()">
                             <i class="fas fa-print"></i> Imprimir Ticket
                         </button>
                     </div>
@@ -104,7 +115,8 @@
         </div>
     </div>
 
-<script src="js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -124,6 +136,7 @@
     const db = getFirestore(app);
     const listaContenedor = document.getElementById('lista-reservaciones');
 
+    // 1. Protección de Acceso
     onAuthStateChanged(auth, (user) => {
         if (user && user.email === "maferx01x@gmail.com") {
             document.getElementById('user-badge').innerText = user.email;
@@ -133,12 +146,13 @@
         }
     });
 
+    // 2. Cargar Reservas
     function escucharReservas() {
         const q = query(collection(db, "reservaciones"), orderBy("timestamp", "desc"));
         onSnapshot(q, (snapshot) => {
             listaContenedor.innerHTML = "";
             if (snapshot.empty) {
-                listaContenedor.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-4">No hay reservaciones hoy.</td></tr>`;
+                listaContenedor.innerHTML = `<tr><td colspan="6" class="text-center text-secondary py-4">No hay reservaciones activas.</td></tr>`;
                 return;
             }
             snapshot.forEach((docSnap) => {
@@ -165,20 +179,39 @@
         });
     }
 
+    // 3. Lógica del Modal de Orden
     window.abrirOrden = (clienteEmail) => {
         document.getElementById('t-cliente').innerText = clienteEmail;
         document.getElementById('t-pedido').value = "";
         document.getElementById('t-total').value = "";
-        const myModal = new bootstrap.Modal(document.getElementById('modalOrden'));
-        myModal.show();
+        
+        const modalElement = document.getElementById('modalOrden');
+        const modalInstance = bootstrap.Modal.getOrCreateInstance(modalElement);
+        modalInstance.show();
     };
 
+    // 4. Lógica de Impresión
+    window.imprimirTicket = () => {
+        const pedido = document.getElementById('t-pedido').value;
+        const total = document.getElementById('t-total').value;
+
+        if (!pedido || !total) {
+            alert("Por favor llena el pedido y el total antes de imprimir.");
+            return;
+        }
+
+        // Abrimos ventana de impresión del navegador
+        window.print();
+    };
+
+    // 5. Borrar Reserva
     window.borrarReserva = async (id) => {
-        if (confirm("¿Eliminar esta reservación?")) {
+        if (confirm("¿Marcar como atendida y eliminar de la lista?")) {
             await deleteDoc(doc(db, "reservaciones", id));
         }
     };
 
+    // 6. Cerrar Sesión
     document.getElementById('btn-logout').addEventListener('click', () => {
         signOut(auth).then(() => window.location.href = "index.html");
     });
