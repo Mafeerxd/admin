@@ -56,10 +56,11 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <p class="small text-secondary">ID Reserva: <span id="t-id" class="text-muted"></span></p>
                     <p class="small text-secondary">Cliente: <span id="t-cliente" class="text-info"></span></p>
                     
                     <div class="mb-3">
-                        <label class="form-label small text-warning">WhatsApp del Cliente (con código de país):</label>
+                        <label class="form-label small text-warning">WhatsApp del Cliente:</label>
                         <input type="tel" id="t-telefono" class="form-control bg-black text-white border-secondary" placeholder="Ej: 525512345678">
                     </div>
 
@@ -94,9 +95,8 @@
                     </div>
 
                     <button class="btn btn-success w-100 mt-4" onclick="enviarWhatsApp()">
-                        <i class="fab fa-whatsapp"></i> Enviar Ticket por WhatsApp
+                        <i class="fab fa-whatsapp"></i> Enviar Ticket y Finalizar
                     </button>
-                    <button class="btn btn-link text-secondary btn-sm w-100 mt-1" onclick="limpiarOrden()">Limpiar Orden</button>
                 </div>
             </div>
         </div>
@@ -123,6 +123,7 @@
     
     let totalGlobal = 0;
     let textoResumen = "";
+    let currentModal;
 
     onAuthStateChanged(auth, (user) => {
         if (user && user.email === "maferx01x@gmail.com") escucharReservas();
@@ -142,19 +143,21 @@
                     <td class="text-info">${data.email}</td>
                     <td>${data.personas}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-warning me-2" onclick="abrirOrden('${data.email}')">Orden</button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="borrarReserva('${docSnap.id}')">Eliminar</button>
+                        <button class="btn btn-sm btn-outline-warning me-2" onclick="abrirOrden('${docSnap.id}', '${data.email}')">Atender</button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="borrarReserva('${docSnap.id}')">X</button>
                     </td>`;
                 tbody.appendChild(tr);
             });
         });
     }
 
-    window.abrirOrden = (email) => {
+    window.abrirOrden = (id, email) => {
+        document.getElementById('t-id').innerText = id;
         document.getElementById('t-cliente').innerText = email;
         document.getElementById('t-telefono').value = ""; 
         limpiarOrden();
-        new bootstrap.Modal(document.getElementById('modalOrden')).show();
+        currentModal = new bootstrap.Modal(document.getElementById('modalOrden'));
+        currentModal.show();
     };
 
     window.agregarPlatillo = () => {
@@ -171,9 +174,11 @@
         document.getElementById('total-cuenta').innerText = `$${totalGlobal.toFixed(2)}`;
     };
 
-    window.enviarWhatsApp = () => {
+    window.enviarWhatsApp = async () => {
         const tel = document.getElementById('t-telefono').value.trim();
-        if (!tel || totalGlobal === 0) return alert("Ingresa el teléfono y agrega platillos.");
+        const idReserva = document.getElementById('t-id').innerText;
+        
+        if (!tel || totalGlobal === 0) return alert("Falta el teléfono o platillos.");
 
         let msj = `*🇲🇽 TICKET MAFERMEX*\n\n`;
         msj += `*Cliente:* ${document.getElementById('t-cliente').innerText}\n`;
@@ -181,7 +186,16 @@
         msj += `*TOTAL: $${totalGlobal.toFixed(2)}*\n\n`;
         msj += `¡Gracias por tu visita! ✨`;
 
+        // 1. Abrir WhatsApp
         window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msj)}`, '_blank');
+
+        // 2. Borrar de Firebase automáticamente
+        try {
+            await deleteDoc(doc(db, "reservaciones", idReserva));
+            currentModal.hide(); // Cerrar el modal
+        } catch (error) {
+            console.error("Error al borrar:", error);
+        }
     };
 
     window.limpiarOrden = () => {
