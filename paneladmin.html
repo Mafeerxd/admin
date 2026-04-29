@@ -4,44 +4,70 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/bootstrap.min.css">
-    <link rel="stylesheet" href="css/reserva01.css">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <title>Acceso Admin - MaferMex</title>
+    <title>Panel de Meseros - MaferMex</title>
+    <style>
+        body { background-color: #000; color: white; font-family: 'Poppins', sans-serif; }
+        .admin-container { padding: 40px 20px; }
+        .table-reserva { 
+            background-color: #111; 
+            border-radius: 10px; 
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+        .table-reserva thead { background-color: #d4af37; color: black; }
+        .table-reserva td { vertical-align: middle; border-color: #222; color: #ccc; }
+        .btn-reservacion { background-color: #d4af37; color: black; font-weight: 600; border: none; }
+        .btn-reservacion:hover { background-color: #b38f2d; }
+    </style>
 </head>
-<body class="bg-black">
+<body>
 
-<section class="vh-100 d-flex align-items-center justify-content-center">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-5 col-lg-4">
-                <div class="card bg-dark text-white border-secondary shadow-lg">
-                    <div class="card-body p-5 text-center">
-                        <img src="items/logo.png" alt="Logo" class="mb-4" style="max-height: 80px;">
-                        <h2 class="titulo-principal fs-2 mb-4" style="color: #d4af37;">Admin Login</h2>
-                        
-                        <form id="admin-login-form"> 
-                            <div class="mb-3 text-start">
-                                <label class="form-label font-family-poppins">Usuario Administrador</label>
-                                <input type="email" id="email" class="form-control bg-black text-white border-secondary" value="maferx01x@gmail.com" readonly>
-                            </div>
-                            <div class="mb-4 text-start">
-                                <label class="form-label font-family-poppins">Contraseña</label>
-                                <input type="password" id="password" class="form-control bg-black text-white border-secondary" placeholder="••••••••" required>
-                            </div>
-                            <button type="submit" id="btn-ingresar" class="btn btn-reservacion w-100 py-2">Ingresar al Panel</button>
-                        </form>
-                        <div id="error-msg" class="text-danger mt-3 small d-none">Credenciales incorrectas.</div>
-                    </div>
-                </div>
+    <nav class="navbar navbar-dark bg-black border-bottom border-secondary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <img src="items/logo.png" style="max-height: 40px;" class="me-2"> 
+                PANEL DE CONTROL MESEROS
+            </a>
+            <div>
+                <span id="user-badge" class="small me-3 text-secondary"></span>
+                <button id="btn-logout" class="btn btn-outline-danger btn-sm">Cerrar Sesión</button>
             </div>
         </div>
+    </nav>
+
+    <div class="container admin-container">
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <h2 style="color: #d4af37;">Próximas Reservaciones</h2>
+                <p class="text-secondary">Lista en tiempo real de los clientes registrados.</p>
+            </div>
+        </div>
+
+        <div class="table-responsive table-reserva">
+            <table class="table table-dark table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        <th>Cliente</th>
+                        <th>Pax</th>
+                        <th>Notas</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="lista-reservaciones">
+                    <tr><td colspan="6" class="text-center py-4">Cargando reservaciones...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-</section>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, query, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyAo3jrNj8tE4f1rjtv1ac6baXwbadybpwA",
@@ -54,27 +80,57 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
+    const listaContenedor = document.getElementById('lista-reservaciones');
 
-    const loginForm = document.getElementById('admin-login-form');
-    const btnIngresar = document.getElementById('btn-ingresar');
-
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = "maferx01x@gmail.com";
-        const password = document.getElementById('password').value;
-        const errorMsg = document.getElementById('error-msg');
-
-        btnIngresar.innerText = "Verificando...";
-        btnIngresar.disabled = true;
-
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            window.location.href = "paneladmin.html"; 
-        } catch (error) {
-            errorMsg.classList.remove('d-none');
-            btnIngresar.innerText = "Ingresar al Panel";
-            btnIngresar.disabled = false;
+    // Protección de Ruta
+    onAuthStateChanged(auth, (user) => {
+        if (user && user.email === "maferx01x@gmail.com") {
+            document.getElementById('user-badge').innerText = user.email;
+            escucharReservas();
+        } else {
+            window.location.href = "loginadmin.html";
         }
+    });
+
+    function escucharReservas() {
+        const q = query(collection(db, "reservaciones"), orderBy("timestamp", "desc"));
+        onSnapshot(q, (snapshot) => {
+            listaContenedor.innerHTML = "";
+            if (snapshot.empty) {
+                listaContenedor.innerHTML = `<tr><td colspan="6" class="text-center text-secondary">No hay reservaciones pendientes.</td></tr>`;
+                return;
+            }
+            snapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const id = docSnap.id;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${data.fecha}</td>
+                    <td><span class="badge border border-secondary">${data.hora}</span></td>
+                    <td class="text-info">${data.email}</td>
+                    <td class="text-center">${data.personas}</td>
+                    <td class="small text-muted">${data.notas || "-"}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" onclick="borrarReserva('${id}')">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                listaContenedor.appendChild(tr);
+            });
+        });
+    }
+
+    // Funciones globales
+    window.borrarReserva = async (id) => {
+        if (confirm("¿Eliminar esta reservación?")) {
+            await deleteDoc(doc(db, "reservaciones", id));
+        }
+    };
+
+    document.getElementById('btn-logout').addEventListener('click', () => {
+        signOut(auth).then(() => window.location.href = "index.html");
     });
 </script>
 </body>
